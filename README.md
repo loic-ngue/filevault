@@ -103,9 +103,34 @@ Chaque service expose deux sondes : `/live` (le processus répond, sonde de vie)
 
 L'image MinIO vient de `cgr.dev/chainguard/minio`, épinglée par empreinte : le dépôt `minio/minio` de Docker Hub n'est plus accessible sans compte.
 
-### Avec ArgoCD
+### Avec ArgoCD (déploiement continu, en place)
 
-Renseigner l'adresse du dépôt dans [argocd/application.yaml](argocd/application.yaml), installer ArgoCD (commandes en tête du fichier), puis `kubectl apply -f argocd/application.yaml`. ArgoCD synchronise `k8s/` à chaque commit et annule toute modification faite à la main. Pour la recette R-10, le retour arrière se fait donc par un `git revert` ou depuis l'interface d'ArgoCD, pas par `kubectl rollout undo`, qu'ArgoCD effacerait aussitôt.
+ArgoCD v3.6.1 tourne dans le namespace `argocd` et suit `k8s/` sur la branche `main`. Installation : commandes en tête de [argocd/application.yaml](argocd/application.yaml), puis `kubectl apply -f argocd/application.yaml`.
+
+Le cycle complet après un `git push` sur `main` :
+
+1. GitHub Actions lint et teste les 5 services, construit les images, les scanne avec Trivy et les publie sur `ghcr.io/loic-ngue/filevault-<service>:<commit>`.
+2. Le pipeline commite la nouvelle étiquette dans `k8s/kustomization.yaml` (« Déploie … »).
+3. ArgoCD voit ce commit (il interroge Git toutes les 3 minutes au plus) et l'applique.
+4. Les Deployments sont remplacés copie par copie, sans coupure.
+
+Mesuré le 7 novembre 2026 : 145 s du `git push` aux 4 Deployments à jour, 58 requêtes pendant l'opération, 0 en échec.
+
+```bash
+git pull --rebase
+```
+
+```bash
+git push
+```
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/suivi-deploiement.ps1
+```
+
+Le `git pull --rebase` est indispensable avant chaque push : le pipeline ajoute lui-même un commit sur `main` après chaque déploiement. Le script de suivi affiche chaque étape et compte les requêtes en échec. L'option `-Rafraichir` évite l'attente de l'interrogation d'ArgoCD.
+
+ArgoCD annule toute modification faite à la main sur le cluster. `scripts/deployer-local.ps1` ne sert donc que sans ArgoCD. Pour la recette R-10, le retour arrière se fait donc par un `git revert` ou depuis l'interface d'ArgoCD, pas par `kubectl rollout undo`, qu'ArgoCD effacerait aussitôt.
 
 ## Lancer sans Docker (démo rapide)
 
