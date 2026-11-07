@@ -16,7 +16,16 @@ function Sonde {
     $b = curl.exe -sk -m 5 -o NUL -w '%{http_code}' --resolve filevault.local:443:127.0.0.1 https://filevault.local/api/links/inconnu
     ($a -eq '200') -and ($b -eq '410')
 }
-function Images { kubectl -n filevault get deploy -o 'jsonpath={range .items[*]}{.spec.template.spec.containers[0].image}{" "}{.status.updatedReplicas}/{.status.readyReplicas}/{.status.replicas}{";"}{end}' }
+# Lu en JSON : PowerShell 5.1 retire les guillemets d'un gabarit jsonpath passé à kubectl.
+function Deployments {
+    ((kubectl -n filevault get deploy -o json | Out-String) | ConvertFrom-Json).items | ForEach-Object {
+        [pscustomobject]@{
+            Nom    = $_.metadata.name
+            Image  = $_.spec.template.spec.containers[0].image
+            AJour  = ($_.status.updatedReplicas -eq $_.status.replicas) -and ($_.status.readyReplicas -eq $_.status.replicas) -and -not $_.status.unavailableReplicas
+        }
+    }
+}
 
 $court = $Commit.Substring(0, 7)
 $chrono = [Diagnostics.Stopwatch]::StartNew()
@@ -58,11 +67,12 @@ while ($chrono.Elapsed.TotalMinutes -lt $MinutesMax) {
         }
     }
     if ($etape -eq 'pods') {
-        $etats = (Images) -split ';' | Where-Object { $_ }
-        $prets = @($etats | Where-Object { $_ -match ":$Commit (\d+)/\1/\1$" })
-        if ($prets.Count -eq $etats.Count) {
+        $etats = @(Deployments)
+        $prets = @($etats | Where-Object { $_.Image.EndsWith(":$Commit") -and $_.AJour })
+        # Les 4 Deployments de FileVault : une liste vide ne doit jamais passer pour un succès.
+        if ($etats.Count -eq 4 -and $prets.Count -eq 4) {
             $jalons['Pods à jour'] = $chrono.Elapsed
-            Write-Host ("{0,5} s  les {1} Deployments tournent l'image {2}" -f [int]$chrono.Elapsed.TotalSeconds, $etats.Count, $court)
+            Write-Host ("{0,5} s  les {1} Deployments tournent l'image {2}" -f [int]$chrono.Elapsed.TotalSeconds, $prets.Count, $court)
             $etape = 'fini'
             break
         }
