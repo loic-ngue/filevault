@@ -23,7 +23,8 @@ resources:
   - autoscaling.yaml
   - network-policies.yaml
 
-# Valeurs locales : images construites sur le poste par scripts/deployer-local.ps1.
+# Réécrit par le pipeline à chaque push sur main (étape 7). Valeurs de départ : images
+# locales construites par scripts/deployer-local.ps1.
 images:
   - name: filevault/link-service
     newTag: dev

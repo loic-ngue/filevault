@@ -36,6 +36,13 @@ if ($kindNodes) {
 kubectl apply -k (Join-Path $root 'k8s')
 if ($LASTEXITCODE -ne 0) { throw 'kubectl apply a échoué.' }
 
+# k8s/ pointe vers les images publiées par le pipeline : on lui substitue les images locales.
+# Avec ArgoCD actif, ce remplacement serait aussitôt annulé : ce script sert sans ArgoCD.
+foreach ($deployment in 'link-service', 'upload-service', 'download-service', 'frontend') {
+    kubectl -n filevault set image "deployment/$deployment" "$deployment=filevault/${deployment}:dev" | Out-Null
+}
+kubectl -n filevault set image cronjob/cleanup 'cleanup=filevault/cleanup:dev' | Out-Null
+
 # Même étiquette dev qu'avant : on force le redémarrage pour prendre les nouvelles images.
 kubectl -n filevault rollout restart deployment link-service upload-service download-service frontend
 foreach ($deployment in 'link-service', 'upload-service', 'download-service', 'frontend') {

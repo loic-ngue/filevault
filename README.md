@@ -17,7 +17,7 @@ Partage de fichiers chiffrés par lien temporaire, en micro-services Node.js, li
 | `argocd/application.yaml` | Application GitOps | écrit, adresse du dépôt à renseigner |
 | `scripts/creer-secrets.ps1`, `scripts/deployer-local.ps1` | Secrets hors de Git, déploiement manuel | utilisés sur le cluster |
 | `scripts/recette.ps1`, `scripts/test-charge.ps1` | Critères de recette sur le cluster, test de charge du HPA | utilisés sur le cluster |
-| `.github/workflows/ci-cd.yml` | Pipeline : lint, tests, build | partie CI |
+| `.github/workflows/ci-cd.yml` | Pipeline : lint, tests, build, scan Trivy, publication GHCR, mise à jour de `k8s/` | CI et CD |
 
 ## Lancer les tests d'un service
 

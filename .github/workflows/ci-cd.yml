@@ -1,20 +1,31 @@
 name: CI/CD
 
+# Section 8 du cahier des charges. Une pull request ne lance que la partie CI (étapes 1 à 5).
+# Un push sur main lance aussi la partie CD (étapes 6 et 7) ; ArgoCD fait l'étape 8 depuis le cluster.
 on:
   push:
     branches: [main]
+    # Le commit de l'étape 7 ne touche que k8s/ : il ne relance pas le pipeline.
     paths-ignore: ['k8s/**', 'docs/**', '**.md']
   pull_request:
+
+permissions:
+  contents: read
+
+# Actions épinglées par SHA de commit, et Trivy par empreinte (version 0.69.3) :
+# recommandation de l'avis GHSA-69fq-xp46-6x23 après la compromission de trivy-action en mars 2026.
+env:
+  TRIVY_IMAGE: ghcr.io/aquasecurity/trivy@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c
 
 jobs:
   # upload-service et download-service partagent le format des objets chiffrés.
   contract:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: cmp services/upload-service/src/crypto.js services/download-service/src/crypto.js
 
-  # Étapes 1 à 3 : lint et tests de chaque service, en parallèle.
+  # Étapes 1 à 3 : récupération, lint et tests de chaque service, en parallèle.
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -25,8 +36,8 @@ jobs:
       run:
         working-directory: services/${{ matrix.service }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -35,19 +46,80 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-  # Étape 4 : une image par service, étiquetée avec l'identifiant du commit.
-  # Les étapes 5 à 8 (Trivy, GHCR, manifestes, ArgoCD) viendront ici.
+  # Étapes 4 à 6 : image étiquetée avec l'identifiant du commit, scan, publication.
   build:
     needs: [contract, test]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
+      fail-fast: false
       matrix:
         service: [link-service, upload-service, download-service, cleanup, frontend]
+    env:
+      LOCAL_IMAGE: filevault-${{ matrix.service }}:${{ github.sha }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Construction de l'image (étape 4)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: services/${{ matrix.service }}
+          load: true
           push: false
-          tags: filevault/${{ matrix.service }}:${{ github.sha }}
+          tags: ${{ env.LOCAL_IMAGE }}
+          # Relie l'image au dépôt dans GitHub Packages.
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      # ES-10 : le pipeline échoue si l'image contient une faille critique corrigeable.
+      - name: Scan de sécurité Trivy (étape 5)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+            --exit-code 1 --severity CRITICAL --ignore-unfixed --no-progress "$LOCAL_IMAGE"
+
+      - name: Connexion à GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publication sur GHCR (étape 6)
+        if: github.event_name == 'push'
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/filevault-${{ matrix.service }}:${GITHUB_SHA}"
+          docker tag "$LOCAL_IMAGE" "$image"
+          docker push "$image"
+
+  # Étape 7 : nouvelle étiquette d'image dans Git. ArgoCD la voit et met à jour le cluster (étape 8).
+  manifests:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Deux déploiements ne réécrivent jamais k8s/ en même temps.
+    concurrency:
+      group: manifests
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Mise à jour de k8s/kustomization.yaml
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          for service in link-service upload-service download-service cleanup frontend; do
+            NAME="filevault/$service" NEW_NAME="ghcr.io/$owner/filevault-$service" TAG="$GITHUB_SHA" \
+              yq -i '(.images[] | select(.name == strenv(NAME))) |= (.newName = strenv(NEW_NAME) | .newTag = strenv(TAG))' \
+              k8s/kustomization.yaml
+          done
+          git diff
+      - name: Commit et push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Déploie ${GITHUB_SHA::7} [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
