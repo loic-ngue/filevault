@@ -24,17 +24,17 @@ resources:
 # locales construites par scripts/deployer-local.ps1.
 images:
   - name: filevault/link-service
-    newTag: 448685812912a939fa1977e2f8da0fc1a8d17c14
+    newTag: f67e9782f11da92b0e8744aa829c2551e5de1f94
     newName: ghcr.io/loic-ngue/filevault-link-service
   - name: filevault/upload-service
-    newTag: 448685812912a939fa1977e2f8da0fc1a8d17c14
+    newTag: f67e9782f11da92b0e8744aa829c2551e5de1f94
     newName: ghcr.io/loic-ngue/filevault-upload-service
   - name: filevault/download-service
-    newTag: 448685812912a939fa1977e2f8da0fc1a8d17c14
+    newTag: f67e9782f11da92b0e8744aa829c2551e5de1f94
     newName: ghcr.io/loic-ngue/filevault-download-service
   - name: filevault/cleanup
-    newTag: 448685812912a939fa1977e2f8da0fc1a8d17c14
+    newTag: f67e9782f11da92b0e8744aa829c2551e5de1f94
     newName: ghcr.io/loic-ngue/filevault-cleanup
   - name: filevault/frontend
-    newTag: 448685812912a939fa1977e2f8da0fc1a8d17c14
+    newTag: f67e9782f11da92b0e8744aa829c2551e5de1f94
     newName: ghcr.io/loic-ngue/filevault-frontend
