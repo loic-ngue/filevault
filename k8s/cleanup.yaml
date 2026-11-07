@@ -1,0 +1,44 @@
+# EF-07 : supprime les fichiers expirés, épuisés ou révoqués, toutes les 5 minutes.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cleanup
+spec:
+  schedule: "*/5 * * * *"
+  # Jamais deux nettoyages en même temps.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 240
+      template:
+        metadata:
+          labels: { app: cleanup }
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile: { type: RuntimeDefault }
+          containers:
+            - name: cleanup
+              image: filevault/cleanup
+              envFrom:
+                - configMapRef: { name: filevault-config }
+              env:
+                - name: REDIS_URL
+                  valueFrom: { secretKeyRef: { name: filevault-secrets, key: REDIS_URL } }
+                - name: MINIO_ACCESS_KEY
+                  valueFrom: { secretKeyRef: { name: filevault-secrets, key: MINIO_ROOT_USER } }
+                - name: MINIO_SECRET_KEY
+                  valueFrom: { secretKeyRef: { name: filevault-secrets, key: MINIO_ROOT_PASSWORD } }
+              resources:
+                requests: { cpu: 50m, memory: 64Mi }
+                limits: { cpu: 200m, memory: 128Mi }
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: ["ALL"] }

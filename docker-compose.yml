@@ -1,0 +1,74 @@
+# Lancement local : copier .env.example en .env, puis `docker compose up --build`.
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redis-data:/data]
+
+  minio:
+    image: cgr.dev/chainguard/minio@sha256:3b6e40c30ecd5cea627e382ff0b82ca841f58c52294578787043ee80c8ef7c82
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports: ["9001:9001"] # console MinIO
+    volumes: [minio-data:/data]
+
+  link-service:
+    build: ./services/link-service
+    environment:
+      REDIS_URL: redis://redis:6379
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+    ports: ["3001:3000"]
+    depends_on: [redis]
+
+  upload-service:
+    build: ./services/upload-service
+    environment:
+      REDIS_URL: redis://redis:6379
+      LINK_SERVICE_URL: http://link-service:3000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      MASTER_KEY: ${MASTER_KEY}
+      MINIO_ENDPOINT: minio
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      TRUST_PROXY: "1"
+    ports: ["3002:3000"]
+    depends_on: [redis, minio, link-service]
+
+  download-service:
+    build: ./services/download-service
+    environment:
+      LINK_SERVICE_URL: http://link-service:3000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      MASTER_KEY: ${MASTER_KEY}
+      MINIO_ENDPOINT: minio
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    ports: ["3003:3000"]
+    depends_on: [minio, link-service]
+
+  cleanup:
+    build: ./services/cleanup
+    environment:
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+    depends_on: [redis, minio]
+    profiles: [cleanup] # lancé à la demande : docker compose run --rm cleanup
+
+  frontend:
+    build: ./services/frontend
+
+  # Point d'entrée unique, comme l'Ingress : http://localhost:8080
+  gateway:
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    volumes: ["./docker/gateway.conf:/etc/nginx/conf.d/default.conf:ro"]
+    ports: ["8080:8080"]
+    depends_on: [frontend, link-service, upload-service, download-service]
+
+volumes:
+  redis-data:
+  minio-data:

@@ -1,0 +1,75 @@
+# ES-08 : tout trafic entrant est refusé, sauf les chemins listés ici.
+#   contrôleur Ingress -> frontend, upload, link, download
+#   upload, download   -> link-service
+#   upload, download, cleanup -> MinIO
+#   link, upload, cleanup     -> Redis
+# Appliqué seulement si le CNI du cluster gère les NetworkPolicy (à vérifier, section 9).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: refuser-par-defaut
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: depuis-ingress
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: [frontend, upload-service, link-service, download-service] }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vers-link-service
+spec:
+  podSelector:
+    matchLabels: { app: link-service }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app, operator: In, values: [upload-service, download-service] }
+      ports:
+        - port: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vers-minio
+spec:
+  podSelector:
+    matchLabels: { app: minio }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app, operator: In, values: [upload-service, download-service, cleanup] }
+      ports:
+        - port: 9000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: vers-redis
+spec:
+  podSelector:
+    matchLabels: { app: redis }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - { key: app, operator: In, values: [link-service, upload-service, cleanup] }
+      ports:
+        - port: 6379

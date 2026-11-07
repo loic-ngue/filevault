@@ -1,0 +1,28 @@
+# 2 à 6 copies dès 70 % de CPU (section 6, R-09). Nécessite metrics-server.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: upload-service
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: upload-service }
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: download-service
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: download-service }
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }

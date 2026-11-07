@@ -1,0 +1,38 @@
+# Configuration non secrète (section 9). Les secrets sont créés hors de Git
+# par scripts/creer-secrets.ps1 (ES-07).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filevault-config
+data:
+  PORT: "3000"
+  LINK_SERVICE_URL: http://link-service:3000
+  MINIO_ENDPOINT: minio
+  MINIO_PORT: "9000"
+  MINIO_BUCKET: filevault
+  # 5m sert aux recettes R-01 et R-04 devant le jury.
+  ALLOWED_DURATIONS: 5m,10m,1h,24h,7d
+  MAX_FILE_SIZE: "52428800"
+  MAX_DOWNLOADS: "10"
+  UPLOADS_PER_HOUR: "10"
+  # Un proxy de confiance devant les services : le contrôleur Ingress.
+  TRUST_PROXY: "1"
+---
+# Remplace public/config.json dans l'image du frontend.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+data:
+  config.json: |
+    {
+      "durations": [
+        { "value": "5m", "label": "5 minutes" },
+        { "value": "10m", "label": "10 minutes" },
+        { "value": "1h", "label": "1 heure", "default": true },
+        { "value": "24h", "label": "24 heures" },
+        { "value": "7d", "label": "7 jours" }
+      ],
+      "maxDownloads": 10,
+      "maxFileSizeMb": 50
+    }

@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: link-service
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    # Aucune copie retirée avant que la nouvelle soit prête : pas de coupure (R-07).
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  selector:
+    matchLabels: { app: link-service }
+  template:
+    metadata:
+      labels: { app: link-service }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: link-service
+          image: filevault/link-service
+          envFrom:
+            - configMapRef: { name: filevault-config }
+          env:
+            - name: REDIS_URL
+              valueFrom: { secretKeyRef: { name: filevault-secrets, key: REDIS_URL } }
+            - name: INTERNAL_TOKEN
+              valueFrom: { secretKeyRef: { name: filevault-secrets, key: INTERNAL_TOKEN } }
+            - name: ADMIN_TOKEN
+              valueFrom: { secretKeyRef: { name: filevault-secrets, key: ADMIN_TOKEN } }
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet: { path: /health, port: 3000 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /live, port: 3000 }
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: link-service
+spec:
+  selector: { app: link-service }
+  ports:
+    - port: 3000

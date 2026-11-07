@@ -1,0 +1,42 @@
+# Entrée HTTPS unique, routage par chemin (section 9). Contrôleur : ingress-nginx.
+# Certificat : Secret filevault-tls, créé par scripts/creer-secrets.ps1 (ES-06).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: filevault
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # 50 Mo + en-têtes multipart. La valeur par défaut (1 Mo) ferait échouer R-01.
+    nginx.ingress.kubernetes.io/proxy-body-size: 51m
+    # Fichiers transmis en flux dans les deux sens, sans tampon dans le contrôleur.
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    # HSTS : envoyé par défaut par ingress-nginx sur un hôte TLS, et par Helmet dans les services.
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [filevault.local]
+      secretName: filevault-tls
+  rules:
+    - host: filevault.local
+      http:
+        paths:
+          - path: /api/upload
+            pathType: Prefix
+            backend:
+              service: { name: upload-service, port: { number: 3000 } }
+          - path: /api/links
+            pathType: Prefix
+            backend:
+              service: { name: link-service, port: { number: 3000 } }
+          - path: /d/
+            pathType: Prefix
+            backend:
+              service: { name: download-service, port: { number: 3000 } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: frontend, port: { number: 8080 } }

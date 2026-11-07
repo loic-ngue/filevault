@@ -1,0 +1,10 @@
+{
+  "durations": [
+    { "value": "10m", "label": "10 minutes" },
+    { "value": "1h", "label": "1 heure", "default": true },
+    { "value": "24h", "label": "24 heures" },
+    { "value": "7d", "label": "7 jours" }
+  ],
+  "maxDownloads": 10,
+  "maxFileSizeMb": 50
+}

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: download-service
+spec:
+  # Pas de replicas ici : le HPA (autoscaling.yaml) en décide, entre 2 et 6.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  selector:
+    matchLabels: { app: download-service }
+  template:
+    metadata:
+      labels: { app: download-service }
+    spec:
+      automountServiceAccountToken: false
+      # Laisse finir les téléchargements en cours lors d'une mise à jour.
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: download-service
+          image: filevault/download-service
+          envFrom:
+            - configMapRef: { name: filevault-config }
+          env:
+            - name: INTERNAL_TOKEN
+              valueFrom: { secretKeyRef: { name: filevault-secrets, key: INTERNAL_TOKEN } }
+            - name: MASTER_KEY
+              valueFrom: { secretKeyRef: { name: filevault-secrets, key: MASTER_KEY } }
+            - name: MINIO_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: filevault-secrets, key: MINIO_ROOT_USER } }
+            - name: MINIO_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: filevault-secrets, key: MINIO_ROOT_PASSWORD } }
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet: { path: /health, port: 3000 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /live, port: 3000 }
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: download-service
+spec:
+  selector: { app: download-service }
+  ports:
+    - port: 3000

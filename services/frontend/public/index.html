@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>FileVault</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/js/app.js"></script>
+</head>
+<body>
+  <header class="top">
+    <a href="/" class="brand"><img src="/favicon.svg" alt="" width="28" height="28">FileVault</a>
+  </header>
+
+  <main>
+    <!-- Dépôt (EF-01 à EF-04, EF-08, EF-09) -->
+    <section id="view-upload" hidden>
+      <h1>Partager un fichier</h1>
+      <p class="lead">Le fichier est chiffré, accessible par un lien unique, puis supprimé dès que le lien expire.</p>
+
+      <form id="upload-form" class="card" novalidate>
+        <label class="drop" id="drop">
+          <input type="file" id="file" class="visually-hidden">
+          <span class="drop-icon" aria-hidden="true">⇪</span>
+          <span class="drop-title" id="drop-title">Glissez un fichier ici</span>
+          <span class="drop-hint" id="drop-hint">ou touchez pour choisir</span>
+        </label>
+
+        <div class="row">
+          <label>Durée de validité
+            <select id="duration"></select>
+          </label>
+          <label>Téléchargements max.
+            <input type="number" id="max-downloads" min="1" max="10" value="3" inputmode="numeric" required>
+          </label>
+        </div>
+
+        <label><span>Mot de passe <span class="optional">(facultatif)</span></span>
+          <input type="password" id="password" maxlength="72" autocomplete="new-password">
+        </label>
+
+        <p class="error" id="upload-error" role="alert" hidden></p>
+        <div class="progress" id="progress" hidden><div class="bar" id="bar"></div></div>
+        <button type="submit" id="submit">Chiffrer et créer le lien</button>
+      </form>
+
+      <div id="result" class="card result" hidden>
+        <h2>Lien prêt</h2>
+        <p>Envoyez ce lien au destinataire. Si vous avez mis un mot de passe, donnez-le par un autre canal.</p>
+        <div class="copy-row">
+          <input id="link" readonly aria-label="Lien de partage">
+          <button type="button" id="copy">Copier</button>
+        </div>
+        <p class="meta" id="result-meta"></p>
+
+        <details>
+          <summary>Code de révocation</summary>
+          <p>Gardez ce code : il permet de supprimer le lien avant son expiration.</p>
+          <code id="revoke-code"></code>
+          <button type="button" id="revoke" class="danger">Révoquer maintenant</button>
+        </details>
+        <p class="status" id="revoke-status" role="status"></p>
+
+        <button type="button" id="again" class="secondary">Partager un autre fichier</button>
+      </div>
+    </section>
+
+    <!-- Destinataire (EF-05, EF-06, EF-10) -->
+    <section id="view-download" hidden>
+      <h1>Un fichier vous a été partagé</h1>
+      <p class="loading" id="download-loading">Chargement…</p>
+
+      <div class="card" id="file-card" hidden>
+        <p class="file-name" id="file-name"></p>
+        <dl class="facts">
+          <div><dt>Taille</dt><dd id="file-size"></dd></div>
+          <div><dt>Expire dans</dt><dd id="file-expires"></dd></div>
+          <div><dt>Téléchargements restants</dt><dd id="file-remaining"></dd></div>
+        </dl>
+        <form id="download-form" novalidate>
+          <label id="download-password-label" hidden>Mot de passe
+            <input type="password" id="download-password" autocomplete="off">
+          </label>
+          <p class="error" id="download-error" role="alert" hidden></p>
+          <button type="submit" id="download">Télécharger</button>
+        </form>
+      </div>
+
+      <div class="card gone" id="download-gone" hidden>
+        <h2>Lien indisponible</h2>
+        <p id="download-gone-text"></p>
+        <a href="/" class="button secondary">Partager un fichier</a>
+      </div>
+    </section>
+
+    <!-- Administration (EF-11) -->
+    <section id="view-admin" hidden>
+      <h1>Administration</h1>
+      <form id="admin-form" class="card" novalidate>
+        <label>Jeton administrateur
+          <input type="password" id="admin-token" autocomplete="off" required>
+        </label>
+        <p class="error" id="admin-error" role="alert" hidden></p>
+        <button type="submit">Afficher les statistiques</button>
+      </form>
+      <dl class="stats" id="stats" hidden>
+        <div><dt>Fichiers actifs</dt><dd id="stat-files"></dd></div>
+        <div><dt>Volume stocké</dt><dd id="stat-bytes"></dd></div>
+        <div><dt>Téléchargements</dt><dd id="stat-downloads"></dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <footer>
+    <span>Chiffrement AES-256-GCM · suppression automatique</span>
+    <a href="#/admin">Administration</a>
+  </footer>
+</body>
+</html>

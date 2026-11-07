@@ -1,0 +1,30 @@
+# Application GitOps (section 9) : ArgoCD tire le dossier k8s/ du dépôt et aligne le
+# cluster dessus. Le cluster local n'est pas joignable par GitHub : c'est lui qui tire.
+#
+# Installation :
+#   kubectl create namespace argocd
+#   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+#   kubectl apply -f argocd/application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: filevault
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/loic-ngue/filevault.git
+    targetRevision: main
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: filevault
+  syncPolicy:
+    automated:
+      prune: true # supprime du cluster ce qui a disparu de Git
+      selfHeal: true # annule toute modification faite à la main sur le cluster
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 3
+      backoff: { duration: 10s, factor: 2, maxDuration: 1m }

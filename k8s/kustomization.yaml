@@ -1,0 +1,37 @@
+# Point d'entrée des manifestes : kubectl apply -k k8s/  (et ArgoCD, qui lit ce dossier).
+# Le pipeline CD réécrit la section images à chaque commit (étape 7) :
+#   newName -> ghcr.io/<compte>/filevault-<service>, newTag -> identifiant du commit.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: filevault
+
+labels:
+  - pairs: { app.kubernetes.io/part-of: filevault }
+    includeSelectors: false
+
+resources:
+  - namespace.yaml
+  - config.yaml
+  - redis.yaml
+  - minio.yaml
+  - link-service.yaml
+  - upload-service.yaml
+  - download-service.yaml
+  - frontend.yaml
+  - cleanup.yaml
+  - ingress.yaml
+  - autoscaling.yaml
+  - network-policies.yaml
+
+# Valeurs locales : images construites sur le poste par scripts/deployer-local.ps1.
+images:
+  - name: filevault/link-service
+    newTag: dev
+  - name: filevault/upload-service
+    newTag: dev
+  - name: filevault/download-service
+    newTag: dev
+  - name: filevault/cleanup
+    newTag: dev
+  - name: filevault/frontend
+    newTag: dev

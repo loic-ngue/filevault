@@ -1,0 +1,53 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['k8s/**', 'docs/**', '**.md']
+  pull_request:
+
+jobs:
+  # upload-service et download-service partagent le format des objets chiffrés.
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmp services/upload-service/src/crypto.js services/download-service/src/crypto.js
+
+  # Étapes 1 à 3 : lint et tests de chaque service, en parallèle.
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [link-service, upload-service, download-service, cleanup, frontend]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: services/${{ matrix.service }}/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  # Étape 4 : une image par service, étiquetée avec l'identifiant du commit.
+  # Les étapes 5 à 8 (Trivy, GHCR, manifestes, ArgoCD) viendront ici.
+  build:
+    needs: [contract, test]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [link-service, upload-service, download-service, cleanup, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: services/${{ matrix.service }}
+          push: false
+          tags: filevault/${{ matrix.service }}:${{ github.sha }}
