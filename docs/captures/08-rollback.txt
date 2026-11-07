@@ -1,0 +1,22 @@
+# R-10 : historique des versions et retour arrière
+# Généré le 2026-11-07 04:29:02 par scripts/collecter-preuves.ps1
+
+PS> kubectl -n filevault rollout history deployment link-service
+deployment.apps/link-service 
+REVISION  CHANGE-CAUSE
+12        <none>
+13        <none>
+14        <none>
+15        <none>
+16        <none>
+18        <none>
+19        <none>
+21        <none>
+22        <none>
+24        <none>
+25        <none>
+
+
+PS> Get-Content (Join-Path $sortie '06-recette.txt') | Select-String 'R-10' | ForEach-Object { $_.Line }
+OK     R-10    version dÃ©fectueuse sans effet sur le service (410), annulÃ©e par rollout undo
+

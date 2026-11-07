@@ -1,0 +1,33 @@
+# ArgoCD : application synchronisée sur Git (étape 8)
+# Généré le 2026-11-07 04:19:40 par scripts/collecter-preuves.ps1
+
+PS> kubectl -n argocd get application filevault -o 'custom-columns=APPLICATION:.metadata.name,SYNC:.status.sync.status,SANTE:.status.health.status,REVISION:.status.sync.revision,DEPOT:.spec.source.repoURL,DOSSIER:.spec.source.path'
+APPLICATION   SYNC     SANTE     REVISION                                   DEPOT                                        DOSSIER
+filevault     Synced   Healthy   1671a27ea89e6f7a48db8823965f6f37ad964330   https://github.com/loic-ngue/filevault.git   k8s
+
+PS> ((kubectl -n argocd get application filevault -o json | Out-String) | ConvertFrom-Json).status.history | Select-Object -Last 8 | ForEach-Object { '{0}  révision {1}  déployée le {2}' -f $_.id, $_.revision.Substring(0, 7), $_.deployedAt }
+0  révision 4f0b954  déployée le 2026-11-07T02:38:43Z
+1  révision 4b0333c  déployée le 2026-11-07T02:43:47Z
+2  révision e93dbe2  déployée le 2026-11-07T02:54:21Z
+
+PS> kubectl -n filevault get deploy -o 'custom-columns=DEPLOYMENT:.metadata.name,PRETS:.status.readyReplicas,IMAGE:.spec.template.spec.containers[0].image'
+DEPLOYMENT         PRETS   IMAGE
+download-service   2       ghcr.io/loic-ngue/filevault-download-service:45bf3a28da3bd06a54d7fa6d6a070a19860e1506
+frontend           2       ghcr.io/loic-ngue/filevault-frontend:45bf3a28da3bd06a54d7fa6d6a070a19860e1506
+link-service       2       ghcr.io/loic-ngue/filevault-link-service:45bf3a28da3bd06a54d7fa6d6a070a19860e1506
+upload-service     4       ghcr.io/loic-ngue/filevault-upload-service:45bf3a28da3bd06a54d7fa6d6a070a19860e1506
+
+PS> git -C $racine log --oneline -12
+1671a27 Documente le déploiement continu avec ArgoCD
+e93dbe2 Déploie 45bf3a2 [skip ci]
+45bf3a2 Corrige le suivi de déploiement : vérifie vraiment les 4 Deployments
+4b0333c Déploie f67e978 [skip ci]
+f67e978 Répare les accents du workflow et ajoute le suivi de déploiement
+4f0b954 DÃ©ploie 4486858 [skip ci]
+4486858 Corrige les failles critiques relevées par Trivy
+1e8db68 Permet de relancer le pipeline à la main
+25cba3d Relance le pipeline CI/CD
+cae1f58 Ajoute la partie CD : scan Trivy, publication GHCR, mise à jour de k8s/
+c7a6a6c Fixe les fins de ligne : LF partout, CRLF pour les scripts PowerShell
+84ea9ba FileVault : partage de fichiers chiffrés en micro-services
+

@@ -1,0 +1,14 @@
+# ES-10 : scan Trivy des images en production (aucune faille critique corrigeable)
+# Généré le 2026-11-07 04:19:43 par scripts/collecter-preuves.ps1
+
+PS> $trivy = 'ghcr.io/aquasecurity/trivy@sha256:bcc376de8d77cfe086a917230e818dc9f8528e3c852f7b1aff648949b6258d1c'
+        $images = kubectl -n filevault get deploy -o 'jsonpath={.items[*].spec.template.spec.containers[0].image}'
+        foreach ($image in ($images -split ' ')) {
+            docker run --rm -v //var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/root/.cache $trivy image --skip-version-check --quiet --severity CRITICAL --ignore-unfixed --exit-code 1 --format table $image | Out-Null
+            '{0,-70} {1}' -f $image, $(if ($LASTEXITCODE -eq 0) { 'aucune faille critique' } else { 'FAILLE CRITIQUE' })
+        }
+ghcr.io/loic-ngue/filevault-download-service:45bf3a28da3bd06a54d7fa6d6a070a19860e1506 aucune faille critique
+ghcr.io/loic-ngue/filevault-frontend:45bf3a28da3bd06a54d7fa6d6a070a19860e1506 aucune faille critique
+ghcr.io/loic-ngue/filevault-link-service:45bf3a28da3bd06a54d7fa6d6a070a19860e1506 aucune faille critique
+ghcr.io/loic-ngue/filevault-upload-service:45bf3a28da3bd06a54d7fa6d6a070a19860e1506 aucune faille critique
+

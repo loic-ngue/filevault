@@ -1,0 +1,21 @@
+# ES-09 : conteneurs non root, système de fichiers en lecture seule, sans capacités
+# Généré le 2026-11-07 04:19:39 par scripts/collecter-preuves.ps1
+
+PS> kubectl -n filevault get pods -o 'custom-columns=POD:.metadata.name,NON_ROOT:.spec.securityContext.runAsNonRoot,UTILISATEUR:.spec.securityContext.runAsUser,LECTURE_SEULE:.spec.containers[0].securityContext.readOnlyRootFilesystem,ESCALADE:.spec.containers[0].securityContext.allowPrivilegeEscalation,CAPACITES_RETIREES:.spec.containers[0].securityContext.capabilities.drop'
+POD                                 NON_ROOT   UTILISATEUR   LECTURE_SEULE   ESCALADE   CAPACITES_RETIREES
+cleanup-29900345-8djc2              true       1000          true            false      [ALL]
+cleanup-29900350-fj955              true       1000          true            false      [ALL]
+cleanup-29900355-9vzm4              true       1000          true            false      [ALL]
+download-service-6bd4bfd745-7ggpc   true       1000          true            false      [ALL]
+download-service-6bd4bfd745-jlwv4   true       1000          true            false      [ALL]
+frontend-6b9c694dc4-8t2jl           true       101           true            false      [ALL]
+frontend-6b9c694dc4-brbk5           true       101           true            false      [ALL]
+link-service-7cd74796c8-6n86x       true       1000          true            false      [ALL]
+link-service-7cd74796c8-lkz6p       true       1000          true            false      [ALL]
+minio-0                             true       65532         true            false      [ALL]
+redis-0                             true       999           true            false      [ALL]
+upload-service-6658794477-htgxn     true       1000          true            false      [ALL]
+upload-service-6658794477-ntksk     true       1000          true            false      [ALL]
+upload-service-6658794477-xnvjs     true       1000          true            false      [ALL]
+upload-service-6658794477-xqbkc     true       1000          true            false      [ALL]
+

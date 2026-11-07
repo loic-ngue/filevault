@@ -1,0 +1,25 @@
+# GitHub Actions : dernières exécutions du pipeline CI/CD
+# Généré le 2026-11-07 04:19:41 par scripts/collecter-preuves.ps1
+
+PS> (Api '/actions/runs?per_page=6').workflow_runs | ForEach-Object { '{0}  {1,-10} {2,-8} commit {3}  {4}' -f $_.created_at, $_.conclusion, $_.event, $_.head_sha.Substring(0, 7), $_.html_url }
+2026-11-07T02:52:45Z  success    push     commit 45bf3a2  https://github.com/loic-ngue/filevault/actions/runs/42331363347
+2026-11-07T02:40:32Z  success    push     commit f67e978  https://github.com/loic-ngue/filevault/actions/runs/42330405232
+2026-11-07T02:35:15Z  success    push     commit 4486858  https://github.com/loic-ngue/filevault/actions/runs/42329984676
+2026-11-07T02:23:34Z  failure    push     commit 1e8db68  https://github.com/loic-ngue/filevault/actions/runs/42329018888
+2026-11-07T01:53:58Z  success    push     commit c7a6a6c  https://github.com/loic-ngue/filevault/actions/runs/42326471864
+
+PS> $run = (Api '/actions/runs?per_page=1&status=success').workflow_runs[0]; "Détail de l'exécution $($run.id) (commit $($run.head_sha.Substring(0, 7))) :"; (Api "/actions/runs/$($run.id)/jobs?per_page=30").jobs | ForEach-Object { '  {0,-9} {1,-28} {2,4} s' -f $_.conclusion, $_.name, [int]([datetime]$_.completed_at - [datetime]$_.started_at).TotalSeconds }
+Détail de l'exécution 42331363347 (commit 45bf3a2) :
+  success   test (link-service)             9 s
+  success   test (download-service)        13 s
+  success   contract                        5 s
+  success   test (upload-service)          11 s
+  success   test (frontend)                 7 s
+  success   test (cleanup)                 10 s
+  success   build (link-service)           45 s
+  success   build (download-service)       58 s
+  success   build (upload-service)         52 s
+  success   build (cleanup)                54 s
+  success   build (frontend)               31 s
+  success   manifests                       7 s
+

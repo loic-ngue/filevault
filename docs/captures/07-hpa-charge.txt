@@ -1,0 +1,16 @@
+# R-09 : montée en charge, le HPA ajoute des copies d'upload-service
+# Généré le 2026-11-07 04:22:17 par scripts/collecter-preuves.ps1
+
+PS> powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'test-charge.ps1')
+ArgoCD : synchronisation automatique suspendue le temps du test.
+Attente du retour à 2 copies (stabilisation du HPA, 5 min au plus)…
+Charge lancée : 6 clients, 1 Mo par dépôt.
+  16 s  CPU   13 %  copies 2 (voulu 2)
+  31 s  CPU  104 %  copies 2 (voulu 3)
+  47 s  CPU  151 %  copies 3 (voulu 5)
+  63 s  CPU  127 %  copies 5 (voulu 5)
+ArgoCD : synchronisation automatique rétablie, le cluster se réaligne sur Git.
+NAME             REFERENCE                   TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+upload-service   Deployment/upload-service   cpu: 13%/70%   2         6         5          6d3h
+OK     R-09    le HPA a dépassé 4 copies. Limite de dépôts rétablie.
+

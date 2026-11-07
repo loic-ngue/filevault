@@ -1,0 +1,75 @@
+# Objets Kubernetes de FileVault (namespace filevault)
+# Généré le 2026-11-07 04:19:35 par scripts/collecter-preuves.ps1
+
+PS> kubectl get nodes -o wide
+NAME                    STATUS   ROLES           AGE   VERSION   INTERNAL-IP   EXTERNAL-IP   OS-IMAGE                       KERNEL-VERSION                              CONTAINER-RUNTIME
+desktop-control-plane   Ready    control-plane   37d   v1.36.1   172.18.0.3    <none>        Debian GNU/Linux 13 (trixie)   6.18.54.1-microsoft-standard-WSL2 (amd64)   containerd://2.3.1
+
+PS> kubectl -n filevault get deploy,statefulset,pods,svc -o wide
+NAME                               READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS         IMAGES                                                                                  SELECTOR
+deployment.apps/download-service   2/2     2            2           6d2h   download-service   ghcr.io/loic-ngue/filevault-download-service:45bf3a28da3bd06a54d7fa6d6a070a19860e1506   app=download-service
+deployment.apps/frontend           2/2     2            2           6d2h   frontend           ghcr.io/loic-ngue/filevault-frontend:45bf3a28da3bd06a54d7fa6d6a070a19860e1506           app=frontend
+deployment.apps/link-service       2/2     2            2           6d2h   link-service       ghcr.io/loic-ngue/filevault-link-service:45bf3a28da3bd06a54d7fa6d6a070a19860e1506       app=link-service
+deployment.apps/upload-service     4/4     4            4           6d2h   upload-service     ghcr.io/loic-ngue/filevault-upload-service:45bf3a28da3bd06a54d7fa6d6a070a19860e1506     app=upload-service
+
+NAME                     READY   AGE    CONTAINERS   IMAGES
+statefulset.apps/minio   1/1     6d2h   minio        cgr.dev/chainguard/minio@sha256:3b6e40c30ecd5cea627e382ff0b82ca841f58c52294578787043ee80c8ef7c82
+statefulset.apps/redis   1/1     6d2h   redis        redis:7.4-alpine
+
+NAME                                    READY   STATUS      RESTARTS   AGE     IP             NODE                    NOMINATED NODE   READINESS GATES
+pod/cleanup-29900345-8djc2              0/1     Completed   0          14m     10.244.0.243   desktop-control-plane   <none>           <none>
+pod/cleanup-29900350-fj955              0/1     Completed   0          9m36s   10.244.0.12    desktop-control-plane   <none>           <none>
+pod/cleanup-29900355-9vzm4              0/1     Completed   0          4m36s   10.244.0.28    desktop-control-plane   <none>           <none>
+pod/download-service-6bd4bfd745-7ggpc   1/1     Running     0          25m     10.244.0.236   desktop-control-plane   <none>           <none>
+pod/download-service-6bd4bfd745-jlwv4   1/1     Running     0          24m     10.244.0.239   desktop-control-plane   <none>           <none>
+pod/frontend-6b9c694dc4-8t2jl           1/1     Running     0          24m     10.244.0.241   desktop-control-plane   <none>           <none>
+pod/frontend-6b9c694dc4-brbk5           1/1     Running     0          25m     10.244.0.235   desktop-control-plane   <none>           <none>
+pod/link-service-7cd74796c8-6n86x       1/1     Running     0          3m50s   10.244.0.31    desktop-control-plane   <none>           <none>
+pod/link-service-7cd74796c8-lkz6p       1/1     Running     0          4m3s    10.244.0.30    desktop-control-plane   <none>           <none>
+pod/minio-0                             1/1     Running     0          4m42s   10.244.0.27    desktop-control-plane   <none>           <none>
+pod/redis-0                             1/1     Running     0          4m42s   10.244.0.26    desktop-control-plane   <none>           <none>
+pod/upload-service-6658794477-htgxn     1/1     Running     0          71s     10.244.0.41    desktop-control-plane   <none>           <none>
+pod/upload-service-6658794477-ntksk     1/1     Running     0          83s     10.244.0.40    desktop-control-plane   <none>           <none>
+pod/upload-service-6658794477-xnvjs     1/1     Running     0          59s     10.244.0.42    desktop-control-plane   <none>           <none>
+pod/upload-service-6658794477-xqbkc     1/1     Running     0          46s     10.244.0.43    desktop-control-plane   <none>           <none>
+
+NAME                       TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE    SELECTOR
+service/download-service   ClusterIP   10.96.61.26     <none>        3000/TCP   6d2h   app=download-service
+service/frontend           ClusterIP   10.96.101.91    <none>        8080/TCP   6d2h   app=frontend
+service/link-service       ClusterIP   10.96.136.187   <none>        3000/TCP   6d2h   app=link-service
+service/minio              ClusterIP   10.96.181.45    <none>        9000/TCP   6d2h   app=minio
+service/redis              ClusterIP   10.96.172.115   <none>        6379/TCP   6d2h   app=redis
+service/upload-service     ClusterIP   10.96.215.73    <none>        3000/TCP   6d2h   app=upload-service
+
+PS> kubectl -n filevault get hpa,cronjob,ingress,networkpolicy,pvc
+NAME                                                   REFERENCE                     TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/download-service   Deployment/download-service   cpu: 11%/70%   2         6         2          6d2h
+horizontalpodautoscaler.autoscaling/upload-service     Deployment/upload-service     cpu: 13%/70%   2         6         4          6d2h
+
+NAME                    SCHEDULE      TIMEZONE   SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+cronjob.batch/cleanup   */5 * * * *   <none>     False     0        4m38s           6d2h
+
+NAME                                  CLASS   HOSTS             ADDRESS      PORTS     AGE
+ingress.networking.k8s.io/filevault   nginx   filevault.local   172.18.0.6   80, 443   6d2h
+
+NAME                                                 POD-SELECTOR                                                     AGE
+networkpolicy.networking.k8s.io/depuis-ingress       app in (download-service,frontend,link-service,upload-service)   6d2h
+networkpolicy.networking.k8s.io/refuser-par-defaut   <none>                                                           6d2h
+networkpolicy.networking.k8s.io/vers-link-service    app=link-service                                                 6d2h
+networkpolicy.networking.k8s.io/vers-minio           app=minio                                                        6d2h
+networkpolicy.networking.k8s.io/vers-redis           app=redis                                                        6d2h
+
+NAME                                 STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/data-minio-0   Bound    pvc-00e7d047-52df-4b7e-84b1-9a20270b743f   5Gi        RWO            standard       <unset>                 6d2h
+persistentvolumeclaim/data-redis-0   Bound    pvc-9ac379e6-e116-457e-84cd-408138f99f69   1Gi        RWO            standard       <unset>                 6d2h
+
+PS> kubectl -n filevault get configmap,secret
+NAME                         DATA   AGE
+configmap/filevault-config   10     6d2h
+configmap/frontend-config    1      6d2h
+configmap/kube-root-ca.crt   1      6d2h
+
+NAME                       TYPE                DATA   AGE
+secret/filevault-secrets   Opaque              7      6d2h
+secret/filevault-tls       kubernetes.io/tls   2      6d2h
+

@@ -1,0 +1,29 @@
+# Recette sur le cluster (section 13), à travers l'Ingress HTTPS
+# Généré le 2026-11-07 04:20:00 par scripts/collecter-preuves.ps1
+
+PS> powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'recette.ps1') @option
+ArgoCD : synchronisation automatique suspendue le temps du test.
+OK     ES-06   HTTP redirigé vers HTTPS
+OK     R-01    fichier de 2 Mo déposé, lien /d/NynKlp…
+OK     R-05    un seul nouvel objet dans MinIO
+OK     R-05    objet brut illisible, 2097241 octets
+OK     EF-10   contrat.pdf, 2097152 octets
+OK     EF-08   mauvais mot de passe refusé
+OK     R-02    téléchargement 1 identique à l'original (SHA-256)
+OK     R-02    téléchargement 2 identique à l'original (SHA-256)
+OK     R-03    3e téléchargement : 410, Lien expiré ou invalide.
+OK     EF-07   fichier épuisé supprimé de MinIO par cleanup
+OK     R-06    codes 401,401,401,401,429, puis bon mot de passe : 429
+OK     Persist. lien et fichier conservés après redémarrage de Redis et MinIO
+OK     EF-09   lien révoqué, puis refusé
+OK     EF-11   109 fichier(s) actif(s), 18 téléchargement(s)
+OK     R-08    pod recréé en 16 s, 0 requête(s) en échec
+OK     R-07    mise à jour progressive en 28 s : 59 requêtes, 0 en échec (partie déploiement seulement)
+Warning: resource deployments/link-service was previously managed with 'kubectl apply'. Rolling back will not update the kubectl.kubernetes.io/last-applied-configuration annotation, which may cause unexpected behavior on future 'kubectl apply' operations. Consider using 'kubectl apply' with your previous configuration file instead.
+OK     R-10    version défectueuse sans effet sur le service (410), annulée par rollout undo
+OK     ES-08   pod autorisé : joint MinIO
+OK     ES-08   pod non autorisé : ne joint pas MinIO
+ArgoCD : synchronisation automatique rétablie, le cluster se réaligne sur Git.
+
+Recette réussie.
+

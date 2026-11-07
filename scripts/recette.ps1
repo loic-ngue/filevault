@@ -6,6 +6,7 @@
 param([switch]$AttendreExpiration)
 
 $ErrorActionPreference = 'Continue'
+. (Join-Path $PSScriptRoot 'argocd-pause.ps1')
 $ns = 'filevault'
 $base = 'https://filevault.local'
 $script:echecs = 0
@@ -38,7 +39,9 @@ function Objets { ([regex]::Matches((Minio '?list-type=2'), '<Key>([^<]+)</Key>'
 function Sonde([hashtable]$etiquettes, [string]$cible) {
     $nom = 'recette-reseau-' + (Get-Random -Maximum 99999)
     $labels = ($etiquettes.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ','
-    $out = kubectl -n $ns run $nom --rm -i --restart=Never --quiet --image=filevault/link-service:dev --labels=$labels `
+    # Image déjà présente sur le nœud : celle que link-service fait tourner (elle contient wget).
+    $image = kubectl -n $ns get deployment link-service -o 'jsonpath={.spec.template.spec.containers[0].image}'
+    $out = kubectl -n $ns run $nom --rm -i --restart=Never --quiet --image=$image --labels=$labels `
         --command -- wget -T 5 -q -O /dev/null -S $cible 2>&1 | Out-String
     $out -match 'HTTP/1\.1 200'
 }
@@ -55,6 +58,8 @@ $script:minioUser = Secret 'MINIO_ROOT_USER'
 $script:minioPass = Secret 'MINIO_ROOT_PASSWORD'
 $pf = Start-Process kubectl -ArgumentList '-n', $ns, 'port-forward', 'pod/minio-0', '19000:9000' -WindowStyle Hidden -PassThru
 Start-Sleep 3
+# R-10 déploie une version défectueuse à la main : ArgoCD l'annulerait avant le rollout undo.
+$argoSuspendu = Suspendre-ArgoCD
 
 try {
     Resultat 'ES-06' ((Https -o NUL -w '%{http_code}' 'http://filevault.local/') -eq '308') 'HTTP redirigé vers HTTPS'
@@ -131,14 +136,19 @@ try {
     Resultat 'R-08' (($chrono.Elapsed.TotalSeconds -lt 30) -and ($coupures -eq 0)) "pod recréé en $([int]$chrono.Elapsed.TotalSeconds) s, $coupures requête(s) en échec"
 
     # Mise à jour progressive sans coupure
+    $generation = [int](kubectl -n $ns get deployment link-service -o 'jsonpath={.metadata.generation}')
     kubectl -n $ns rollout restart deployment link-service | Out-Null
     $coupures = 0; $total = 0; $chrono.Restart()
     do {
         $total++
         if ((Https -o NUL -w '%{http_code}' "$base/api/links/inconnu") -ne '410') { $coupures++ }
-        $fini = (kubectl -n $ns get deployment link-service -o 'jsonpath={.status.updatedReplicas}/{.status.readyReplicas}/{.status.replicas}')
-    } while ($fini -ne '2/2/2' -and $chrono.Elapsed.TotalSeconds -lt 120)
-    Resultat 'R-07' ($coupures -eq 0) "mise à jour progressive : $total requêtes, $coupures en échec (partie déploiement seulement, sans le pipeline)"
+        $etat = ((kubectl -n $ns get deployment link-service -o json | Out-String) | ConvertFrom-Json).status
+        # Terminé seulement quand Kubernetes a pris en compte le redémarrage (nouvelle génération)
+        # et que toutes les copies tournent la nouvelle version ; sinon l'ancien état passerait pour la fin.
+        $fini = ($etat.observedGeneration -gt $generation) -and ($etat.updatedReplicas -eq 2) -and
+                ($etat.readyReplicas -eq 2) -and ($etat.replicas -eq 2) -and -not $etat.unavailableReplicas
+    } while (-not $fini -and $chrono.Elapsed.TotalSeconds -lt 120)
+    Resultat 'R-07' ($fini -and ($coupures -eq 0) -and ($total -ge 5)) "mise à jour progressive en $([int]$chrono.Elapsed.TotalSeconds) s : $total requêtes, $coupures en échec (partie déploiement seulement)"
 
     # Version défectueuse puis retour arrière (sans ArgoCD, qui annulerait le rollout undo)
     $imageAvant = kubectl -n $ns get deployment link-service -o 'jsonpath={.spec.template.spec.containers[0].image}'
@@ -173,6 +183,7 @@ try {
 } finally {
     Stop-Process -Id $pf.Id -ErrorAction SilentlyContinue
     Remove-Item -Recurse -Force $dossier
+    if ($argoSuspendu) { Reprendre-ArgoCD }
 }
 
 Write-Host ''
