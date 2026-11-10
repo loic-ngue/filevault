@@ -17,6 +17,9 @@ Collectées le 7 novembre 2026 sur le cluster Kubernetes local (Docker Desktop, 
 | Fichier | Critère | Contenu |
 | --- | --- | --- |
 | `12-recette-cluster.png`, `06-recette.txt` | R-01 à R-10, ES-06, ES-08 | 19 vérifications à travers l'Ingress HTTPS, toutes réussies |
+| `18-argocd-vue-reseau.png` | étape 8, section 9 | interface ArgoCD : Ingress → 4 Services → 2 pods chacun, MinIO, Redis, CronJob ; `Healthy`, `Synced`, synchronisation automatique active |
+| `17-argocd-historique.png` | étape 8, R-10 | déploiements appliqués par « automated sync policy » depuis les commits « Déploie … » de `github-actions[bot]`, en 5 à 20 s ; chacun peut servir de point de retour arrière |
+| `16-argocd-applications.png` | étape 8 | application `filevault` liée au dépôt GitHub, branche `main`, dossier `k8s` |
 | `03-argocd.txt` | étape 8 | application `Synced / Healthy`, historique des 3 déploiements GitOps |
 | `10-historique-pipelines.jpg` | section 8 | les 5 exécutions du pipeline, dont une en échec |
 | `11-trivy-bloque-le-deploiement.jpg` | ES-10 | Trivy bloque le déploiement : 5 images avec failles critiques, mise à jour de `k8s/` non exécutée |
@@ -36,7 +39,10 @@ Mesurée avec `scripts/suivi-deploiement.ps1` sur le commit `45bf3a2` :
 
 58 requêtes envoyées à l'application pendant l'opération, aucune en échec.
 
-## À compléter à la main
+## Ouvrir l'interface ArgoCD
 
-- **Interface ArgoCD** : `kubectl -n argocd port-forward svc/argocd-server 8443:443`, puis https://localhost:8443, avec l'utilisateur `admin`. Le mot de passe initial se lit avec `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}"`, encodé en base64.
-- **Application dans le navigateur**, une fois le fichier hosts complété.
+`scripts/argocd-ui.ps1` ouvre https://localhost:8443 et relance le tunnel si le pod redémarre. `scripts/argocd-mot-de-passe.ps1` affiche les identifiants (utilisateur `admin`).
+
+## À compléter
+
+- **Application dans le navigateur**, une fois `127.0.0.1 filevault.local` ajouté au fichier hosts.
