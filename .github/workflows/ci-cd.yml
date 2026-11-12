@@ -120,8 +120,9 @@ jobs:
           git diff
       - name: Commit et push
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Commit signé du compte du projet (adresse masquée GitHub), pas du bot.
+          git config user.name "LOIC"
+          git config user.email "110932552+loic-ngue@users.noreply.github.com"
           git commit -am "Déploie ${GITHUB_SHA::7} [skip ci]"
           git pull --rebase origin main
           git push origin HEAD:main
