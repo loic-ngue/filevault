@@ -17,7 +17,6 @@ async function main() {
     log({ event: 'started', port: config.port });
   });
 
-  // Kubernetes envoie SIGTERM avant d'arrêter le pod : on termine les dépôts en cours.
   process.on('SIGTERM', () => {
     server.close(() => redis.quit().finally(() => process.exit(0)));
   });

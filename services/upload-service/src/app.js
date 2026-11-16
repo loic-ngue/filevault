@@ -5,7 +5,6 @@ const busboy = require('busboy');
 const client = require('prom-client');
 const { createEncryptStream } = require('./crypto');
 
-// Marge pour les en-têtes multipart et les champs autour du fichier.
 const MULTIPART_OVERHEAD = 64 * 1024;
 const INTERRUPTED = 'Requête multipart invalide ou interrompue.';
 
@@ -16,20 +15,15 @@ class HttpError extends Error {
   }
 }
 
-// Garde le nom affiché au destinataire, sans chemin ni caractère de contrôle.
 function cleanName(filename) {
   const base = String(filename || '')
     .split(/[\\/]/)
     .pop()
-    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001f\u007f]/g, '')
     .trim();
   return (base || 'fichier').slice(0, 255);
 }
 
-// Lit le formulaire multipart et chiffre le fichier vers le stockage au fil de l'eau.
-// Les champs duration et maxDownloads doivent précéder le fichier dans le formulaire.
-// En cas d'échec, l'objet éventuellement stocké est supprimé.
 function receiveFile(req, { maxFileSize, masterKey, storage, tooLarge }) {
   return new Promise((resolve, reject) => {
     let bb;
@@ -81,10 +75,7 @@ function receiveFile(req, { maxFileSize, masterKey, storage, tooLarge }) {
       }
       const fileId = crypto.randomBytes(16).toString('base64url');
       const encrypt = createEncryptStream(masterKey, fileId);
-      // L'erreur est déjà retenue par fail() : sans cet écouteur, un flux détruit
-      // alors que le stockage ne le lit plus ferait planter le processus.
       encrypt.on('error', () => {});
-      // Arrête le chiffrement mais continue de vider la requête pour pouvoir répondre.
       const abort = (err) => {
         fail(err);
         file.unpipe(encrypt);
@@ -106,7 +97,6 @@ function receiveFile(req, { maxFileSize, masterKey, storage, tooLarge }) {
       };
     });
 
-    // Formulaire mal formé ou connexion coupée par le client.
     const broken = () => {
       const err = new HttpError(400, INTERRUPTED);
       if (upload) upload.abort(err);
@@ -140,12 +130,10 @@ function createApp({ config, redis, storage, links, log = () => {} }) {
 
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
-  app.use(helmet()); // ES-11
+  app.use(helmet());
 
-  // Sonde de vie : ne teste que le processus. Si MinIO tombe, redémarrer ce service ne servirait à rien.
   app.get('/live', (req, res) => res.json({ status: 'ok' }));
 
-  // Sonde de disponibilité : sans Redis ou MinIO, le pod ne reçoit plus de trafic.
   app.get('/health', async (req, res) => {
     try {
       await Promise.all([redis.ping(), storage.ready()]);
@@ -159,7 +147,6 @@ function createApp({ config, redis, storage, links, log = () => {} }) {
     res.type(registry.contentType).send(await registry.metrics());
   });
 
-  // ES-05 : 10 dépôts par adresse IP et par heure, compteur partagé entre les copies.
   const limitUploads = async (req, res, next) => {
     const key = `uploads:${req.ip}`;
     const [[, count]] = await redis.multi().incr(key).expire(key, 3600, 'NX').exec();
@@ -171,7 +158,6 @@ function createApp({ config, redis, storage, links, log = () => {} }) {
     next();
   };
 
-  // EF-01 : dépôt d'un fichier, chiffré (ES-01) puis lié à un lien temporaire.
   app.post('/api/upload', limitUploads, async (req, res) => {
     if (Number(req.get('content-length')) > config.maxFileSize + MULTIPART_OVERHEAD) {
       req.resume();
@@ -202,15 +188,13 @@ function createApp({ config, redis, storage, links, log = () => {} }) {
 
     uploads.inc({ result: 'ok' });
     uploadedBytes.inc(file.size);
-    // ES-12 : ni nom de fichier ni jeton dans les journaux.
     log({ event: 'uploaded', fileId: file.fileId, size: file.size, duration: fields.duration });
     res.status(201).json({ ...result.body, path: `/d/${result.body.token}` });
   });
 
   app.use((req, res) => res.status(404).json({ error: 'Ressource introuvable.' }));
 
-  // eslint-disable-next-line no-unused-vars
-  app.use((err, req, res, next) => {
+  app.use((err, req, res, _next) => {
     if (err instanceof HttpError) {
       uploads.inc({ result: `error_${err.status}` });
       return res.status(err.status).json({ error: err.message });

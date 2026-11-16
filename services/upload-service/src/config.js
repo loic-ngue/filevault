@@ -10,10 +10,9 @@ function loadConfig(env = process.env) {
     redisUrl: env.REDIS_URL || 'redis://localhost:6379',
     linkServiceUrl: env.LINK_SERVICE_URL || 'http://localhost:3001',
     internalToken: env.INTERNAL_TOKEN || '',
-    masterKey: parseMasterKey(env.MASTER_KEY), // ES-01, ES-07 : injectée depuis un Secret
-    maxFileSize: Number(env.MAX_FILE_SIZE || 50 * 1024 * 1024), // EF-01
-    uploadsPerHour: Number(env.UPLOADS_PER_HOUR || 10), // ES-05
-    // Nombre de proxys de confiance devant le service (1 derrière l'Ingress) pour lire la vraie IP.
+    masterKey: parseMasterKey(env.MASTER_KEY),
+    maxFileSize: Number(env.MAX_FILE_SIZE || 50 * 1024 * 1024),
+    uploadsPerHour: Number(env.UPLOADS_PER_HOUR || 10),
     trustProxy: Number(env.TRUST_PROXY || 0),
     minio: {
       endPoint: env.MINIO_ENDPOINT || 'localhost',

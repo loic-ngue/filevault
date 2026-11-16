@@ -9,7 +9,7 @@ function loadConfig(env = process.env) {
     port: Number(env.PORT || 3000),
     linkServiceUrl: env.LINK_SERVICE_URL || 'http://localhost:3001',
     internalToken: env.INTERNAL_TOKEN || '',
-    masterKey: parseMasterKey(env.MASTER_KEY), // ES-01, ES-07 : injectée depuis un Secret
+    masterKey: parseMasterKey(env.MASTER_KEY),
     minio: {
       endPoint: env.MINIO_ENDPOINT || 'localhost',
       port: Number(env.MINIO_PORT || 9000),

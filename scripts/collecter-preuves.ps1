@@ -1,10 +1,4 @@
-﻿# Preuves d'exécution (section 11) : enregistre dans docs/captures/ l'état du cluster,
-# du pipeline et d'ArgoCD, puis les sorties de la recette et du test de charge.
-# Chaque fichier indique sa date et la commande qui l'a produit.
-# Usage : powershell -ExecutionPolicy Bypass -File scripts\collecter-preuves.ps1 [-SansTests] [-AttendreExpiration]
-#   -SansTests          : seulement l'état (quelques secondes), sans recette ni charge.
-#   -AttendreExpiration : recette avec R-04 (11 minutes de plus).
-param([switch]$SansTests, [switch]$AttendreExpiration)
+﻿param([switch]$SansTests, [switch]$AttendreExpiration)
 
 $ErrorActionPreference = 'Continue'
 $racine = Split-Path -Parent $PSScriptRoot

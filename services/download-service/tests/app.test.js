@@ -14,7 +14,6 @@ async function encrypt(data, fileId = FILE_ID) {
   return Buffer.concat(chunks);
 }
 
-// Rend l'objet en petits morceaux, comme MinIO.
 const chunked = (buffer, size = 4096) => {
   const parts = [];
   for (let i = 0; i < buffer.length; i += size) parts.push(buffer.subarray(i, i + size));

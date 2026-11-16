@@ -6,7 +6,6 @@ spec:
   replicas: 2
   strategy:
     type: RollingUpdate
-    # Aucune copie retirée avant que la nouvelle soit prête : pas de coupure (R-07).
     rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
   selector:
     matchLabels: { app: link-service }

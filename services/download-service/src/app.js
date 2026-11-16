@@ -4,9 +4,8 @@ const client = require('prom-client');
 const { createDecryptStream } = require('./crypto');
 
 const MIME = /^[\w.+-]+\/[\w.+-]+$/;
-const EXPIRED = 'Lien expiré ou invalide.'; // EF-06
+const EXPIRED = 'Lien expiré ou invalide.';
 
-// Réponses de link-service relayées telles quelles au destinataire.
 const FORWARDED = new Set([401, 410, 429]);
 
 class HttpError extends Error {
@@ -16,7 +15,6 @@ class HttpError extends Error {
   }
 }
 
-// Nom ASCII pour les anciens navigateurs, nom UTF-8 complet pour les autres (RFC 6266).
 function contentDisposition(name) {
   const ascii = name.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
   const utf8 = encodeURIComponent(name).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
@@ -26,7 +24,6 @@ function contentDisposition(name) {
 const escapeHtml = (text) =>
   text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-// Un formulaire du navigateur reçoit une page lisible, un appel fetch reçoit du JSON.
 function sendError(req, res, status, message) {
   res.status(status);
   if (req.accepts(['json', 'html']) === 'html') {
@@ -58,12 +55,10 @@ function createApp({ config, storage, links, log = () => {} }) {
   });
 
   app.disable('x-powered-by');
-  app.use(helmet()); // ES-11 ; Referrer-Policy no-referrer : le jeton ne fuit pas vers d'autres sites.
+  app.use(helmet());
 
-  // Sonde de vie : ne teste que le processus. Si MinIO tombe, redémarrer ce service ne servirait à rien.
   app.get('/live', (req, res) => res.json({ status: 'ok' }));
 
-  // Sonde de disponibilité : sans MinIO, le pod ne reçoit plus de trafic.
   app.get('/health', async (req, res) => {
     try {
       await storage.ready();
@@ -77,15 +72,10 @@ function createApp({ config, storage, links, log = () => {} }) {
     res.type(registry.contentType).send(await registry.metrics());
   });
 
-  // Le lien partagé ne télécharge rien : les aperçus de WhatsApp ou des messageries
-  // ouvrent les liens en GET et videraient le compteur. Il renvoie vers la page du
-  // frontend, qui affiche les informations du fichier (EF-10) et le bouton Télécharger.
-  // Le jeton passe dans le fragment (#), jamais envoyé aux serveurs ni journalisé.
   app.get('/d/:token', (req, res) => {
     res.set('Cache-Control', 'no-store').redirect(302, `/#/d/${encodeURIComponent(req.params.token)}`);
   });
 
-  // EF-05 : décompte un téléchargement puis envoie le fichier déchiffré, nom et type d'origine.
   app.post('/d/:token', express.urlencoded({ extended: false, limit: '2kb' }), express.json({ limit: '2kb' }), async (req, res) => {
     const password = req.body && typeof req.body.password === 'string' ? req.body.password : undefined;
 
@@ -109,7 +99,6 @@ function createApp({ config, storage, links, log = () => {} }) {
       log({ event: 'storage_error', fileId, message: err.message });
       throw new HttpError(502, 'Stockage indisponible.');
     }
-    // Déjà supprimé par cleanup : le lien vient d'expirer.
     if (!object) throw new HttpError(410, EXPIRED);
 
     res.set({
@@ -117,7 +106,6 @@ function createApp({ config, storage, links, log = () => {} }) {
       'Content-Length': String(size),
       'Content-Disposition': contentDisposition(name),
       'Cache-Control': 'no-store',
-      // Même un fichier HTML déposé ne peut pas s'exécuter dans le navigateur.
       'Content-Security-Policy': "sandbox; default-src 'none'",
     });
 
@@ -136,14 +124,11 @@ function createApp({ config, storage, links, log = () => {} }) {
         }
         return sendError(req, res, 500, 'Le fichier stocké est illisible.');
       }
-      // Des octets sont déjà partis : on coupe la connexion. Le navigateur voit un
-      // téléchargement incomplet (Content-Length non atteint) au lieu d'un fichier faux.
       res.destroy(err);
     });
     decrypt.on('end', () => {
       downloads.inc({ result: 'ok' });
       downloadedBytes.inc(size);
-      // ES-12 : ni nom de fichier ni jeton dans les journaux.
       log({ event: 'downloaded', fileId, size, remaining: remainingDownloads });
     });
     object.pipe(decrypt).pipe(res);
@@ -151,8 +136,7 @@ function createApp({ config, storage, links, log = () => {} }) {
 
   app.use((req, res) => res.status(404).json({ error: 'Ressource introuvable.' }));
 
-  // eslint-disable-next-line no-unused-vars
-  app.use((err, req, res, next) => {
+  app.use((err, req, res, _next) => {
     if (err instanceof HttpError) {
       downloads.inc({ result: `error_${err.status}` });
       return sendError(req, res, err.status, err.message);

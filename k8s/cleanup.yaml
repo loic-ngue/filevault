@@ -1,11 +1,9 @@
-# EF-07 : supprime les fichiers expirés, épuisés ou révoqués, toutes les 5 minutes.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: cleanup
 spec:
   schedule: "*/5 * * * *"
-  # Jamais deux nettoyages en même temps.
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3

@@ -1,10 +1,3 @@
-// Lance FileVault complet sur http://localhost:8080 sans Docker, pour développer le
-// frontend ou faire une démo rapide. Les vrais services tournent dans un seul processus,
-// routés comme par l'Ingress ; Redis est simulé (ioredis-mock) et MinIO est remplacé par
-// un stockage en mémoire. Tout est perdu à l'arrêt.
-//
-// Prérequis : npm install dans chaque dossier de services/.
-// Usage : node scripts/dev-sans-docker.js   (jeton admin affiché au démarrage)
 const http = require('node:http');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -39,7 +32,6 @@ const link = load('link-service', 'src/app').createApp({
   config: load('link-service', 'src/config').loadConfig({
     INTERNAL_TOKEN,
     ADMIN_TOKEN,
-    // 5 min en plus pour les recettes R-01 et R-04.
     ALLOWED_DURATIONS: '5m,10m,1h,24h,7d',
     BCRYPT_COST: '10',
   }),
@@ -71,7 +63,6 @@ frontend.get('/config.json', (req, res) => {
 });
 frontend.use(express.static(path.join(services, 'frontend', 'public'), { etag: false, maxAge: 0 }));
 
-// CronJob cleanup simulé : toutes les 30 s.
 const { runCleanup } = load('cleanup', 'src/cleanup');
 setInterval(() => runCleanup({ redis: linkRedis, storage, log }).catch((err) => log({ event: 'cleanup_error', message: err.message })), 30_000);
 

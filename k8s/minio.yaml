@@ -1,5 +1,3 @@
-# Stockage des fichiers chiffrés. StatefulSet + volume de 5 Gi.
-# Le bucket est créé au démarrage par upload-service.
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -21,11 +19,9 @@ spec:
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: minio
-          # Le dépôt minio/minio n'est plus accessible sans compte : image Chainguard, épinglée par empreinte.
           image: cgr.dev/chainguard/minio@sha256:3b6e40c30ecd5cea627e382ff0b82ca841f58c52294578787043ee80c8ef7c82
           args: ["server", "/data"]
           env:
-            # Système de fichiers en lecture seule : MinIO écrit sa config dans /tmp.
             - { name: HOME, value: /tmp }
             - name: MINIO_ROOT_USER
               valueFrom: { secretKeyRef: { name: filevault-secrets, key: MINIO_ROOT_USER } }

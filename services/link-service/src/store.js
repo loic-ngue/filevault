@@ -1,11 +1,5 @@
 const { sha256 } = require('./tokens');
 
-// Clés Redis (le jeton n'est jamais stocké en clair, seulement son empreinte) :
-//   link:<sha256(jeton)>      hash du lien, TTL = durée de validité
-//   attempts:<sha256(jeton)>  essais de mot de passe ratés, TTL = durée du blocage
-//   expirations               sorted set fileId -> date de suppression (ms), lu par cleanup
-//   sizes                     hash fileId -> taille, pour les statistiques
-//   stats:downloads           compteur total de téléchargements
 const EXPIRATIONS = 'expirations';
 const SIZES = 'sizes';
 const DOWNLOADS = 'stats:downloads';
@@ -13,9 +7,6 @@ const DOWNLOADS = 'stats:downloads';
 const linkKey = (token) => `link:${sha256(token)}`;
 const attemptsKey = (token) => `attempts:${sha256(token)}`;
 
-// Vérifie et décrémente en une seule opération : deux téléchargements simultanés
-// ne peuvent pas dépasser la limite. Au dernier téléchargement, le lien disparaît
-// et le fichier est planifié pour suppression immédiate.
 const CONSUME_SCRIPT = `
 local remaining = tonumber(redis.call('HGET', KEYS[1], 'remaining'))
 if not remaining or remaining <= 0 then return false end
@@ -59,7 +50,6 @@ function createStore(redis) {
       };
     },
 
-    // Renvoie le nombre de téléchargements restants, ou null si le lien n'existe plus.
     async consume(token, now = Date.now()) {
       return redis.consumeLink(linkKey(token), EXPIRATIONS, DOWNLOADS, now);
     },

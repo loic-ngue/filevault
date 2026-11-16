@@ -1,5 +1,3 @@
-# Stockage des liens. StatefulSet + volume de 1 Gi : les liens survivent
-# au redémarrage du pod (persistance, section 6).
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -22,7 +20,6 @@ spec:
       containers:
         - name: redis
           image: redis:7.4-alpine
-          # Sans l'entrypoint de l'image, qui a besoin de root pour changer d'utilisateur.
           command: ["redis-server"]
           args: ["--appendonly", "yes", "--dir", "/data", "--requirepass", "$(REDIS_PASSWORD)"]
           env:

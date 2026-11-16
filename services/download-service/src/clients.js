@@ -1,4 +1,3 @@
-// Lecture des objets chiffrés dans MinIO. Un objet absent renvoie null.
 function createMinioStorage(minio, bucket) {
   return {
     async get(fileId) {
@@ -13,7 +12,6 @@ function createMinioStorage(minio, bucket) {
   };
 }
 
-// Appel interne à link-service : vérifie le mot de passe et décompte un téléchargement.
 function createLinkClient({ baseUrl, internalToken, timeoutMs = 5000, fetchImpl = fetch }) {
   return {
     async consume(token, password) {

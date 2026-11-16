@@ -3,7 +3,6 @@ kind: Deployment
 metadata:
   name: download-service
 spec:
-  # Pas de replicas ici : le HPA (autoscaling.yaml) en décide, entre 2 et 6.
   strategy:
     type: RollingUpdate
     rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
@@ -14,7 +13,6 @@ spec:
       labels: { app: download-service }
     spec:
       automountServiceAccountToken: false
-      # Laisse finir les téléchargements en cours lors d'une mise à jour.
       terminationGracePeriodSeconds: 60
       securityContext:
         runAsNonRoot: true

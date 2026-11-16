@@ -4,5 +4,4 @@ coverage/
 *.pem
 *.key
 
-# Réglages d'éditeur (IntelliJ, WebStorm)
 .idea/

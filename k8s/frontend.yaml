@@ -16,7 +16,7 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
-        runAsUser: 101 # utilisateur nginx de l'image nginx-unprivileged
+        runAsUser: 101
         seccompProfile: { type: RuntimeDefault }
       containers:
         - name: frontend
@@ -37,7 +37,6 @@ spec:
             readOnlyRootFilesystem: true
             capabilities: { drop: ["ALL"] }
           volumeMounts:
-            # Nginx écrit son pid et son cache dans /tmp (image nginx-unprivileged).
             - { name: tmp, mountPath: /tmp }
             - { name: config, mountPath: /usr/share/nginx/html/config.json, subPath: config.json }
       volumes:

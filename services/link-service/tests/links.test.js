@@ -261,7 +261,7 @@ describe('statistiques administrateur (EF-11)', () => {
     await createLink({ fileId: 'fichier-0001', size: 1000 });
     const second = await createLink({ fileId: 'fichier-0002', size: 500, maxDownloads: 1 });
     await createLink({ fileId: 'fichier-0003', size: 200 });
-    await consume(second.body.token); // épuisé : n'est plus actif
+    await consume(second.body.token);
 
     const res = await request(app).get('/api/links/stats').set('Authorization', ADMIN);
     expect(res.status).toBe(200);

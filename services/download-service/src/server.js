@@ -13,5 +13,4 @@ const server = createApp({ config, storage, links, log }).listen(config.port, ()
   log({ event: 'started', port: config.port });
 });
 
-// Kubernetes envoie SIGTERM avant d'arrêter le pod : on termine les téléchargements en cours.
 process.on('SIGTERM', () => server.close(() => process.exit(0)));

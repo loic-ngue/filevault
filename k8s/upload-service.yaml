@@ -3,8 +3,6 @@ kind: Deployment
 metadata:
   name: upload-service
 spec:
-  # Pas de replicas ici : le HPA (autoscaling.yaml) en décide, entre 2 et 6.
-  # Sinon ArgoCD remettrait 2 copies à chaque synchronisation.
   strategy:
     type: RollingUpdate
     rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
@@ -15,7 +13,6 @@ spec:
       labels: { app: upload-service }
     spec:
       automountServiceAccountToken: false
-      # Laisse finir les dépôts en cours lors d'une mise à jour.
       terminationGracePeriodSeconds: 60
       securityContext:
         runAsNonRoot: true

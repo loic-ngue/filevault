@@ -22,8 +22,6 @@ function showError(element, message) {
   element.hidden = !message;
 }
 
-// ---------- Dépôt ----------
-
 let chosenFile = null;
 let lastUpload = null;
 
@@ -125,7 +123,6 @@ async function copyLink() {
   try {
     await navigator.clipboard.writeText(link.value);
   } catch {
-    // Presse-papiers refusé (HTTP, ancien navigateur) : on sélectionne le texte.
     link.select();
     document.execCommand('copy');
   }
@@ -157,8 +154,6 @@ function setupDurationsDefault() {
   const index = config.durations.findIndex((d) => d.default);
   $('duration').selectedIndex = Math.max(index, 0);
 }
-
-// ---------- Destinataire ----------
 
 let currentLink = null;
 
@@ -225,7 +220,6 @@ async function submitDownload(event) {
     anchor.click();
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    // Met à jour le compteur ; au dernier téléchargement, le lien a disparu.
     const { status, body } = await getLink(currentLink.token);
     if (status === 200) renderLink(currentLink.token, body);
     else showGone('Téléchargement terminé. C’était le dernier : le lien n’est plus valable.');
@@ -234,8 +228,6 @@ async function submitDownload(event) {
   if (result.status === 410) return showGone(errorMessage(410, result.body));
   showError(error, errorMessage(result.status, result.body));
 }
-
-// ---------- Administration ----------
 
 async function submitAdmin(event) {
   event.preventDefault();
@@ -254,8 +246,6 @@ async function submitAdmin(event) {
   $('stat-downloads').textContent = String(body.downloads);
   $('stats').hidden = false;
 }
-
-// ---------- Navigation ----------
 
 function route() {
   const { view, token } = parseRoute(location.hash);

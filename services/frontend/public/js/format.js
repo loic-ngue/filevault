@@ -1,5 +1,3 @@
-// Fonctions pures, testées avec node --test (tests/format.test.js).
-
 const UNITS = ['octets', 'Ko', 'Mo', 'Go'];
 
 export function formatSize(bytes) {
@@ -13,7 +11,6 @@ export function formatSize(bytes) {
   return `${rounded} ${UNITS[unit]}`;
 }
 
-// Temps restant lisible : « 2 j 3 h », « 1 h 05 min », « 4 min 09 s », « expiré ».
 export function formatRemaining(ms) {
   if (ms <= 0) return 'expiré';
   const total = Math.floor(ms / 1000);
@@ -28,7 +25,6 @@ export function formatRemaining(ms) {
   return `${seconds} s`;
 }
 
-// Routes de la page : #/d/<jeton> pour le destinataire, #/admin, sinon le dépôt.
 export function parseRoute(hash) {
   const download = /^#\/d\/([A-Za-z0-9_-]+)$/.exec(hash);
   if (download) return { view: 'download', token: download[1] };
@@ -47,7 +43,6 @@ const DEFAULT_ERRORS = {
   502: 'Service momentanément indisponible. Réessayez dans un instant.',
 };
 
-// Message à afficher : celui du serveur s'il y en a un, sinon un message par code.
 export function errorMessage(status, body) {
   if (body && typeof body.error === 'string' && body.error) return body.error;
   return DEFAULT_ERRORS[status] || `Une erreur est survenue (code ${status}).`;

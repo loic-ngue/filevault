@@ -1,22 +1,14 @@
-﻿# R-07 : suit un git push jusqu'au cluster, en interrogeant l'application en continu.
-#   pipeline GitHub Actions -> commit de déploiement (étape 7) -> synchronisation ArgoCD -> pods à jour
-# À lancer juste après un git push sur main.
-# Usage : powershell -ExecutionPolicy Bypass -File scripts\suivi-deploiement.ps1 [-Commit <sha>] [-Rafraichir]
-#   -Rafraichir : demande à ArgoCD de relire Git tout de suite, au lieu d'attendre son
-#                 interrogation périodique (3 minutes au plus).
-param([string]$Commit = (git rev-parse HEAD), [switch]$Rafraichir, [int]$MinutesMax = 20)
+﻿param([string]$Commit = (git rev-parse HEAD), [switch]$Rafraichir, [int]$MinutesMax = 20)
 
 $ErrorActionPreference = 'Continue'
 $depot = 'loic-ngue/filevault'
 $entetes = @('-H', 'Accept: application/vnd.github+json', '-H', 'User-Agent: filevault-suivi')
 function Api([string]$chemin) { (curl.exe -s @entetes "https://api.github.com/repos/$depot$chemin" | Out-String) | ConvertFrom-Json }
 function Sonde {
-    # Une requête vers le frontend et une vers link-service, à travers l'Ingress.
     $a = curl.exe -sk -m 5 -o NUL -w '%{http_code}' --resolve filevault.local:443:127.0.0.1 https://filevault.local/
     $b = curl.exe -sk -m 5 -o NUL -w '%{http_code}' --resolve filevault.local:443:127.0.0.1 https://filevault.local/api/links/inconnu
     ($a -eq '200') -and ($b -eq '410')
 }
-# Lu en JSON : PowerShell 5.1 retire les guillemets d'un gabarit jsonpath passé à kubectl.
 function Deployments {
     ((kubectl -n filevault get deploy -o json | Out-String) | ConvertFrom-Json).items | ForEach-Object {
         [pscustomobject]@{
@@ -69,7 +61,6 @@ while ($chrono.Elapsed.TotalMinutes -lt $MinutesMax) {
     if ($etape -eq 'pods') {
         $etats = @(Deployments)
         $prets = @($etats | Where-Object { $_.Image.EndsWith(":$Commit") -and $_.AJour })
-        # Les 4 Deployments de FileVault : une liste vide ne doit jamais passer pour un succès.
         if ($etats.Count -eq 4 -and $prets.Count -eq 4) {
             $jalons['Pods à jour'] = $chrono.Elapsed
             Write-Host ("{0,5} s  les {1} Deployments tournent l'image {2}" -f [int]$chrono.Elapsed.TotalSeconds, $prets.Count, $court)

@@ -10,5 +10,9 @@ module.exports = [
       sourceType: 'commonjs',
       globals: { ...globals.node, ...globals.jest },
     },
+    rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-control-regex': 'off',
+    },
   },
 ];

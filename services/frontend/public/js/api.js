@@ -1,7 +1,3 @@
-// Appels aux micro-services. Tout passe par la même origine : l'Ingress (ou la
-// passerelle docker-compose) route /api/upload, /api/links et /d/ vers chaque service.
-// Chaque fonction renvoie { status, body } ; status 0 = réseau injoignable.
-
 const readJson = (res) => res.json().catch(() => ({}));
 
 async function call(url, options) {
@@ -18,8 +14,6 @@ const postJson = (url, data, headers = {}) =>
 
 export const loadConfig = () => call('/config.json', { cache: 'no-cache' });
 
-// XMLHttpRequest plutôt que fetch : lui seul donne la progression de l'envoi.
-// Les champs précèdent le fichier, comme l'exige upload-service.
 export function uploadFile({ duration, maxDownloads, password, file }, onProgress) {
   return new Promise((resolve) => {
     const form = new FormData();
@@ -47,7 +41,6 @@ export const revokeLink = (token, revokeCode) => postJson(`/api/links/${encodeUR
 export const getStats = (adminToken) =>
   call('/api/links/stats', { headers: { authorization: `Bearer ${adminToken}` } });
 
-// Renvoie { status, blob } en cas de succès, { status, body } sinon.
 export async function downloadFile(token, password) {
   try {
     const res = await fetch(`/d/${encodeURIComponent(token)}`, {

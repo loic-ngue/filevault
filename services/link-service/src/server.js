@@ -10,7 +10,6 @@ const server = createApp({ config, redis, log }).listen(config.port, () => {
   log({ event: 'started', port: config.port });
 });
 
-// Kubernetes envoie SIGTERM avant d'arrêter le pod : on termine les requêtes en cours.
 process.on('SIGTERM', () => {
   server.close(() => redis.quit().finally(() => process.exit(0)));
 });

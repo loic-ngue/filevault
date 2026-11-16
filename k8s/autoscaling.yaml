@@ -1,4 +1,3 @@
-# 2 à 6 copies dès 70 % de CPU (section 6, R-09). Nécessite metrics-server.
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

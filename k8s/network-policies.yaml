@@ -1,9 +1,3 @@
-# ES-08 : tout trafic entrant est refusé, sauf les chemins listés ici.
-#   contrôleur Ingress -> frontend, upload, link, download
-#   upload, download   -> link-service
-#   upload, download, cleanup -> MinIO
-#   link, upload, cleanup     -> Redis
-# Appliqué seulement si le CNI du cluster gère les NetworkPolicy (à vérifier, section 9).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

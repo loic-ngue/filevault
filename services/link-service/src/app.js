@@ -5,7 +5,7 @@ const client = require('prom-client');
 const { createStore } = require('./store');
 const { newToken, newRevokeCode, sha256, safeEqual, shortToken } = require('./tokens');
 
-const EXPIRED = { error: 'Lien expiré ou invalide.' }; // EF-06
+const EXPIRED = { error: 'Lien expiré ou invalide.' };
 const FILE_ID = /^[A-Za-z0-9_-]{8,128}$/;
 
 class HttpError extends Error {
@@ -27,7 +27,6 @@ function validateCreate(body, config) {
   if (!Number.isInteger(maxDownloads) || maxDownloads < 1 || maxDownloads > config.maxDownloads) {
     throw new HttpError(400, `Nombre de téléchargements invalide : entre 1 et ${config.maxDownloads}.`);
   }
-  // bcrypt ignore tout ce qui dépasse 72 octets.
   if (password !== undefined && (typeof password !== 'string' || password.length < 1 || Buffer.byteLength(password) > 72)) {
     throw new HttpError(400, 'Mot de passe invalide (1 à 72 octets).');
   }
@@ -60,13 +59,11 @@ function createApp({ config, redis, log = () => {} }) {
   const adminOnly = requireToken(config.adminToken);
 
   app.disable('x-powered-by');
-  app.use(helmet()); // ES-11
+  app.use(helmet());
   app.use(express.json({ limit: '10kb' }));
 
-  // Sonde de vie : ne teste que le processus. Si Redis tombe, redémarrer ce service ne servirait à rien.
   app.get('/live', (req, res) => res.json({ status: 'ok' }));
 
-  // Sonde de disponibilité : sans Redis, le pod ne reçoit plus de trafic.
   app.get('/health', async (req, res) => {
     try {
       await redis.ping();
@@ -80,7 +77,6 @@ function createApp({ config, redis, log = () => {} }) {
     res.type(registry.contentType).send(await registry.metrics());
   });
 
-  // Appelé par upload-service une fois le fichier chiffré stocké dans MinIO.
   app.post('/api/links', internalOnly, async (req, res) => {
     const input = validateCreate(req.body, config);
     const token = newToken();
@@ -104,12 +100,10 @@ function createApp({ config, redis, log = () => {} }) {
     });
   });
 
-  // EF-11 : déclaré avant /:token pour ne pas être pris pour un jeton.
   app.get('/api/links/stats', adminOnly, async (req, res) => {
     res.json(await store.stats());
   });
 
-  // EF-10 : ce que voit le destinataire avant de télécharger.
   app.get('/api/links/:token', async (req, res) => {
     const link = await store.get(req.params.token);
     if (!link) return res.status(410).json(EXPIRED);
@@ -123,14 +117,12 @@ function createApp({ config, redis, log = () => {} }) {
     });
   });
 
-  // Appelé par download-service : vérifie le mot de passe puis décompte un téléchargement.
   app.post('/api/links/:token/consume', internalOnly, async (req, res) => {
     const { token } = req.params;
     const link = await store.get(token);
     if (!link) return res.status(410).json(EXPIRED);
 
     if (link.passwordHash) {
-      // ES-04 : au-delà de 5 échecs, même le bon mot de passe est refusé jusqu'à la fin du blocage.
       if ((await store.failedAttempts(token)) >= config.maxPasswordAttempts) {
         return res.status(429).json({ error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
       }
@@ -153,7 +145,6 @@ function createApp({ config, redis, log = () => {} }) {
     res.json({ fileId: link.fileId, name: link.name, size: link.size, mime: link.mime, remainingDownloads: remaining });
   });
 
-  // EF-09 : l'expéditeur révoque son lien avec le code reçu à la création.
   app.post('/api/links/:token/revoke', async (req, res) => {
     const { token } = req.params;
     const link = await store.get(token);
@@ -169,8 +160,7 @@ function createApp({ config, redis, log = () => {} }) {
 
   app.use((req, res) => res.status(404).json({ error: 'Ressource introuvable.' }));
 
-  // eslint-disable-next-line no-unused-vars
-  app.use((err, req, res, next) => {
+  app.use((err, req, res, _next) => {
     if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
     if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'JSON invalide.' });
     if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Requête trop volumineuse.' });

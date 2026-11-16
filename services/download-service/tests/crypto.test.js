@@ -6,7 +6,6 @@ const { createEncryptStream, createDecryptStream, encryptedSize, HEADER_LENGTH }
 const MASTER_KEY = crypto.randomBytes(32);
 const FILE_ID = 'fichier-test-0001';
 
-// Fait passer un tampon dans un flux, découpé en morceaux de taille donnée.
 async function run(stream, input, chunkSize = 1000) {
   const chunks = [];
   for (let i = 0; i < input.length; i += chunkSize) chunks.push(input.subarray(i, i + chunkSize));
