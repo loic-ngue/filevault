@@ -19,17 +19,17 @@ resources:
   - network-policies.yaml
 images:
   - name: filevault/link-service
-    newTag: 1aeca9b82e39c48b91a9479df9e8b9215b7863cf
+    newTag: 6f8cce39bd1db91f906748ff7786385d1f784de6
     newName: ghcr.io/loic-ngue/filevault-link-service
   - name: filevault/upload-service
-    newTag: 1aeca9b82e39c48b91a9479df9e8b9215b7863cf
+    newTag: 6f8cce39bd1db91f906748ff7786385d1f784de6
     newName: ghcr.io/loic-ngue/filevault-upload-service
   - name: filevault/download-service
-    newTag: 1aeca9b82e39c48b91a9479df9e8b9215b7863cf
+    newTag: 6f8cce39bd1db91f906748ff7786385d1f784de6
     newName: ghcr.io/loic-ngue/filevault-download-service
   - name: filevault/cleanup
-    newTag: 1aeca9b82e39c48b91a9479df9e8b9215b7863cf
+    newTag: 6f8cce39bd1db91f906748ff7786385d1f784de6
     newName: ghcr.io/loic-ngue/filevault-cleanup
   - name: filevault/frontend
-    newTag: 1aeca9b82e39c48b91a9479df9e8b9215b7863cf
+    newTag: 6f8cce39bd1db91f906748ff7786385d1f784de6
     newName: ghcr.io/loic-ngue/filevault-frontend
